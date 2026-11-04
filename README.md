@@ -41,6 +41,28 @@ use_repo(
 register_toolchains("@rules_prometheus//toolchain:all")
 ```
 
+To pin by archive and integrity instead of a git commit, replace the `git_override` with:
+
+```python
+archive_override(
+    module_name = "rules_prometheus",
+    urls = ["https://github.com/collider-bazel-extensions/rules_prometheus/archive/refs/tags/v0.1.0.tar.gz"],
+    strip_prefix = "rules_prometheus-0.1.0",
+    integrity = "sha256-gf62Zn9vkv98s/QElYb7jPtO0Grc4RS89/MGDzV+36E=",
+)
+```
+
+rules_kubectl isn't in the BCR either, so a consumer overrides it too:
+
+```python
+bazel_dep(name = "rules_kubectl", version = "0.2.0")
+git_override(
+    module_name = "rules_kubectl",
+    remote = "https://github.com/collider-bazel-extensions/rules_kubectl",
+    commit = "81b60ab80df46b64c612f2576ffef0a7af98ccb6",  # v0.2.0
+)
+```
+
 The `prometheus` extension only honours the root module's `version` tags (the `mod.is_root` guard used across this organization), so declare it in your own `MODULE.bazel`. The install primitives pull in [rules_kubectl](https://github.com/collider-bazel-extensions/rules_kubectl). The server and test rules need `python3` on the host.
 
 ## Rules, config and rule unit tests
