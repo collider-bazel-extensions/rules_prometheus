@@ -1,0 +1,8 @@
+# Lint: the same recording rule twice (duplicate-rules).
+groups:
+  - name: dup
+    rules:
+      - record: job:up:sum
+        expr: sum by (job) (up)
+      - record: job:up:sum
+        expr: sum by (job) (up)

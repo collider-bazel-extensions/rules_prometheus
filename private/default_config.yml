@@ -1,0 +1,17 @@
+# prometheus_server's default config (and prometheus_test's, with the
+# test's `rules` appended as rule_files): fast intervals, a self-scrape,
+# and runtime scrape targets from PROMETHEUS_FILE_SD_DIR (prom_add_target).
+global:
+  scrape_interval: 1s
+  evaluation_interval: 1s
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["${PROMETHEUS_ADDRESS}"]
+  - job_name: file_sd
+    # Ad-hoc test exporters often send no Content-Type (Prometheus 3
+    # refuses those without a fallback).
+    fallback_scrape_protocol: PrometheusText0.0.4
+    file_sd_configs:
+      - files: ["${PROMETHEUS_FILE_SD_DIR}/*.json"]
+        refresh_interval: 1s

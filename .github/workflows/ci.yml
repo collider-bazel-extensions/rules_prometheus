@@ -1,0 +1,94 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  hermetic:
+    # Rule + config checks, rule unit tests, the hermetic server / prometheus_test
+    # suite, install-manifest + analysis tests and the checksum pins. No
+    # container runtime needed; prometheus + promtool come from the
+    # pinned release tarballs.
+    name: bazel test (ubuntu-latest, hermetic)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.15.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-hermetic
+          repository-cache: true
+
+      - name: Verify NO host prometheus/promtool on PATH
+        run: |
+          set -euo pipefail
+          for bin in prometheus promtool; do
+            if command -v "$bin" >/dev/null 2>&1; then
+              echo "FAIL: $bin found at $(command -v "$bin"); the hermetic toolchain test would be meaningless" >&2
+              exit 1
+            fi
+          done
+
+      # `bazel build //...` would analyze the darwin binary repos too;
+      # target paths instead (same lesson as rules_nats / rules_temporal).
+      # Building the smoke also builds its configured manifest, so a
+      # broken config or chart overlay fails here.
+      - name: bazel build
+        run: bazel build //private/... //toolchain:current //tests/... //tests/install_smoke:smoke_test
+
+      - name: bazel test
+        run: bazel test //tests/... --test_output=errors
+
+      - name: Chart manifest is up to date
+        run: |
+          set -euo pipefail
+          bazel run //tools:render_writeback_29_40_3
+          git diff --exit-code private/manifests/prometheus.yaml
+
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bazel-testlogs-hermetic
+          path: bazel-testlogs/
+          if-no-files-found: ignore
+
+  install_smoke:
+    # kind + the pinned chart (server only) with a custom config; promtool
+    # in the pod checks the config, the mounted rules and remote write.
+    name: install smoke (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.15.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-install-smoke
+          repository-cache: true
+
+      - name: Verify Docker is available
+        run: docker version
+
+      - name: bazel test //tests/install_smoke:smoke_test
+        # kind boot (~30s) + chart apply + deploy rollout (prometheus ~100MB + reloader)
+        # + smoke (~5s).
+        run: bazel test //tests/install_smoke:smoke_test --test_output=streamed --test_timeout=900
+
+      - name: No kind clusters left behind
+        if: always()
+        run: |
+          # rules_kind deletes its cluster even when the test fails.
+          left=$(docker ps -a --filter label=io.x-k8s.kind.cluster --format '{{.Names}}')
+          if [[ -n "$left" ]]; then echo "FAIL: kind node containers left: $left" >&2; exit 1; fi
+
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bazel-testlogs-install-smoke
+          path: bazel-testlogs/
+          if-no-files-found: ignore

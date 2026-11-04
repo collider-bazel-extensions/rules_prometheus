@@ -1,0 +1,87 @@
+"""Full E2E install smoke for prometheus_install with a custom config.
+
+Composition (3-link itest dep chain):
+  kind_svc → prometheus_install_svc → smoke_test
+
+The smoke kubectl-execs promtool inside the prometheus pod: our config
+is running (job smoke-self), our rule file is mounted beside it and
+evaluated (smoke:up:sum), and remote write accepts a pushed sample.
+"""
+
+load("@rules_prometheus//:defs.bzl",
+    "prometheus_config",
+    "prometheus_install",
+    "prometheus_install_health_check",
+)
+load("@rules_itest//:itest.bzl", "itest_service", "service_test")
+load("@rules_kind//:defs.bzl", "kind_cluster", "kind_health_check")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+kind_cluster(name = "cluster", k8s_version = "1.35")
+
+kind_health_check(name = "cluster_health", cluster = ":cluster")
+
+itest_service(
+    name = "kind_svc",
+    exe = ":cluster",
+    health_check = ":cluster_health",
+    # Let rules_kind finish `kind delete` itself instead of leaving it to
+    # its reaper after the test (rules_itest's default is 1s).
+    shutdown_timeout = "300s",
+    tags = ["manual"],
+)
+
+prometheus_config(
+    name = "smoke_config",
+    src = "prometheus.yml",
+    rules = ["smoke.rules.yml"],
+)
+
+prometheus_install(
+    name = "prometheus_install_bin",
+    config = ":smoke_config",
+    tags = ["manual"],
+)
+
+prometheus_install_health_check(
+    name = "prometheus_health_bin",
+    tags = ["manual"],
+)
+
+sh_binary(
+    name = "prometheus_install_wrapper",
+    srcs = ["install_wrapper.sh"],
+    data = [":prometheus_install_bin"],
+)
+
+sh_binary(
+    name = "prometheus_health_wrapper",
+    srcs = ["health_wrapper.sh"],
+    data = [":prometheus_health_bin"],
+)
+
+itest_service(
+    name = "prometheus_install_svc",
+    exe = ":prometheus_install_wrapper",
+    deps = [":kind_svc"],
+    health_check = ":prometheus_health_wrapper",
+    tags = ["manual"],
+)
+
+sh_test(
+    name = "smoke_test_bin",
+    srcs = ["smoke_test.sh"],
+    tags = ["manual"],
+)
+
+service_test(
+    name = "smoke_test",
+    services = [":prometheus_install_svc"],
+    test = ":smoke_test_bin",
+    tags = [
+        "manual",
+        "no-sandbox",
+        "requires-network",
+    ],
+)

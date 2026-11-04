@@ -1,0 +1,6 @@
+# Invalid PromQL.
+groups:
+  - name: bad
+    rules:
+      - record: broken
+        expr: sum(rate(http_requests_total[5m]) by

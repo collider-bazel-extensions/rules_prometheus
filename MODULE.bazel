@@ -1,0 +1,103 @@
+"""rules_prometheus — hermetic Prometheus primitives for Bazel.
+
+Three families in one repo:
+
+  Config + rules (build time):
+    prometheus_rules        — rule files; `promtool check rules` runs as a
+                              validation action on every build
+    prometheus_config       — prometheus.yml + its rule files;
+                              `promtool check config` as a validation action
+    prometheus_rules_test   — rule unit tests (`promtool test rules`)
+
+  Hermetic server (test-time):
+    prometheus_server       — long-running prometheus; writes
+                              $TEST_TMPDIR/<name>.env when /-/ready
+    prometheus_health_check — pairs with prometheus_server
+    prometheus_test         — sh_test macro: auto-launched server with
+                              runtime scrape targets (file_sd), remote-write
+                              and OTLP receivers
+
+  Cluster install (kind / production):
+    prometheus_install              — applies the pinned Helm chart (server
+                                      only), optionally with your config
+    prometheus_install_health_check — paired readiness probe
+
+Pinned: Prometheus v3.15.1 (prometheus + promtool),
+prometheus-community prometheus Helm chart 29.40.3.
+"""
+
+module(
+    name = "rules_prometheus",
+    version = "0.1.0",
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "platforms", version = "1.0.0")
+
+# rules_shell is part of the public surface — `prometheus_test` is an
+# sh_test macro. Bazel 8+ removed `native.sh_test`.
+bazel_dep(name = "rules_shell", version = "0.8.0")
+
+# Public binary toolchain: prometheus + promtool (one upstream tarball).
+# Per-platform repos (prometheus_<ver>_<plat>) come from the
+# `prometheus` extension, which only honours the root module's tags.
+prometheus = use_extension("//:extensions.bzl", "prometheus")
+prometheus.version(version = "3.15.1")
+use_repo(prometheus,
+    "prometheus_3_15_1_linux_amd64",
+    "prometheus_3_15_1_linux_arm64",
+    "prometheus_3_15_1_darwin_amd64",
+    "prometheus_3_15_1_darwin_arm64",
+)
+register_toolchains("@rules_prometheus//toolchain:all")
+
+# rules_kubectl is a public dep — `prometheus_install` is a thin macro
+# around `kubectl_apply`.
+bazel_dep(name = "rules_kubectl", version = "0.2.0")
+git_override(
+    module_name = "rules_kubectl",
+    remote = "https://github.com/collider-bazel-extensions/rules_kubectl",
+    commit = "81b60ab80df46b64c612f2576ffef0a7af98ccb6",  # v0.2.0
+)
+
+# ---- dev-only: maintainer chart-render flow + smoke composition -------------
+
+bazel_dep(name = "rules_helm", version = "0.2.1", dev_dependency = True)
+git_override(
+    module_name = "rules_helm",
+    remote = "https://github.com/collider-bazel-extensions/rules_helm",
+    commit = "48651387d55f0c50f6d059df246ed73767100afb",  # v0.2.1
+)
+
+helm = use_extension("@rules_helm//:extensions.bzl", "helm", dev_dependency = True)
+helm.version(version = "3.20.2")
+use_repo(helm,
+    "helm_linux_amd64",
+    "helm_darwin_amd64",
+    "helm_darwin_arm64",
+)
+register_toolchains(
+    "@helm_linux_amd64//:toolchain",
+    "@helm_darwin_amd64//:toolchain",
+    "@helm_darwin_arm64//:toolchain",
+    dev_dependency = True,
+)
+
+bazel_dep(name = "rules_itest", version = "0.0.52", dev_dependency = True)
+
+bazel_dep(name = "rules_kind", version = "0.3.0", dev_dependency = True)
+git_override(
+    module_name = "rules_kind",
+    remote = "https://github.com/collider-bazel-extensions/rules_kind",
+    commit = "12a73e02fe4b9400d3dc733a3d80ce06c47b6411",  # v0.3.0 — confirmed deletion + sweep, RULES_KIND_MAX_CLUSTERS
+)
+
+# Maintainer-side: download the upstream Helm chart .tgz at the pinned
+# version. Fires only when rules_prometheus is the root module.
+prometheus_chart = use_extension(
+    "//tools:extensions.bzl",
+    "prometheus_chart",
+    dev_dependency = True,
+)
+prometheus_chart.version(version = "29.40.3")
+use_repo(prometheus_chart, "prometheus_chart_29_40_3")

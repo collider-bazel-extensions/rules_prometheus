@@ -1,0 +1,14 @@
+# A deliberately wrong expectation (the alert does fire).
+rule_files:
+  - app.rules.yml
+evaluation_interval: 1s
+tests:
+  - name: wrong expectation
+    interval: 1s
+    input_series:
+      - series: 'up{job="app", instance="a:80"}'
+        values: '0x10'
+    alert_rule_test:
+      - eval_time: 5s
+        alertname: InstanceDown
+        exp_alerts: []

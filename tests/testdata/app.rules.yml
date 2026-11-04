@@ -1,0 +1,12 @@
+groups:
+  - name: app
+    rules:
+      - record: job:up:sum
+        expr: sum by (job) (up)
+      - alert: InstanceDown
+        expr: up{job="app"} == 0
+        for: 2s
+        labels:
+          severity: page
+        annotations:
+          summary: "{{ $labels.instance }} of {{ $labels.job }} is down"

@@ -1,0 +1,172 @@
+"""In-tree tests for rules_prometheus (no container runtime needed; the
+cluster install smoke lives in tests/install_smoke)."""
+
+load("@rules_prometheus//:defs.bzl",
+    "prometheus_config",
+    "prometheus_health_check",
+    "prometheus_install",
+    "prometheus_rules",
+    "prometheus_rules_test",
+    "prometheus_server",
+    "prometheus_test",
+)
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load(":analysis_tests.bzl", "analysis_test_suite")
+
+# ---- rules + config ---------------------------------------------------------------
+
+prometheus_rules(
+    name = "app_rules",
+    srcs = ["testdata/app.rules.yml"],
+)
+
+prometheus_config(
+    name = "test_config",
+    src = "testdata/prometheus.yml",
+    rules = [":app_rules"],
+    placeholders = {"APP_TARGET": "127.0.0.1:9"},
+)
+
+# Rule unit tests (promtool test rules), JUnit XML to Bazel.
+prometheus_rules_test(
+    name = "rules_unit_test",
+    srcs = ["testdata/app_test.yml"],
+    rules = [":app_rules"],
+)
+
+# A deliberately wrong expectation; rules_unit_failure_test runs it and
+# checks it fails with promtool's diff.
+prometheus_rules_test(
+    name = "wrong_rules_unit",
+    srcs = ["testdata/app_wrong_test.yml"],
+    rules = [":app_rules"],
+    tags = ["manual"],
+)
+
+sh_test(
+    name = "rules_unit_failure_test",
+    srcs = ["rules_unit_failure_test.sh"],
+    args = ["$(rootpath :wrong_rules_unit)"],
+    data = [":wrong_rules_unit"],
+    size = "small",
+)
+
+# check.sh failures: invalid PromQL, duplicate rules (lint), invalid
+# config, unresolved placeholder.
+sh_test(
+    name = "invalid_config_test",
+    srcs = ["invalid_config_test.sh"],
+    args = [
+        "$(rootpath //private:check.sh)",
+        "$(rootpaths //toolchain:current)",
+    ],
+    data = glob(["testdata/*"]) + [
+        "//private:check.sh",
+        "//toolchain:current",
+    ],
+    size = "small",
+)
+
+# ---- prometheus_test ----------------------------------------------------------
+
+# Self-scrape, a down placeholder target firing InstanceDown, recording
+# rules, runtime file_sd targets, remote-write push, reload.
+prometheus_test(
+    name = "api_test",
+    srcs = ["api_test.sh"],
+    config = ":test_config",
+    data = [
+        "testdata/push.prom",
+        "testdata/web.prom",
+    ],
+    env = {"APP_TARGET": "127.0.0.1:9"},
+)
+
+# Default config + the test's rules; args forwarding.
+prometheus_test(
+    name = "default_config_test",
+    srcs = ["default_config_test.sh"],
+    rules = [":app_rules"],
+    args = ["one", "'two words'"],
+)
+
+# ---- prometheus_server + health check -------------------------------------------
+
+prometheus_server(
+    name = "test_server",
+    extra_args = ["--log.level=debug"],
+    tags = ["manual"],
+)
+
+prometheus_health_check(
+    name = "test_server_health",
+    server = ":test_server",
+    tags = ["manual"],
+)
+
+prometheus_config(
+    name = "placeholder_config",
+    src = "testdata/needs_placeholder.yml",
+    placeholders = {"MISSING_TARGET": "127.0.0.1:9"},
+)
+
+prometheus_server(
+    name = "placeholder_server",
+    config = ":placeholder_config",
+    tags = ["manual"],
+)
+
+sh_test(
+    name = "server_test",
+    srcs = ["server_test.sh"],
+    args = [
+        "$(rootpath :test_server)",
+        "$(rootpath :placeholder_server)",
+    ],
+    data = [
+        ":placeholder_server",
+        ":test_server",
+    ],
+    size = "medium",
+)
+
+sh_test(
+    name = "health_check_test",
+    srcs = ["health_check_test.sh"],
+    args = ["$(rootpath :test_server_health)"],
+    data = [":test_server_health"],
+    size = "small",
+)
+
+# ---- install (no cluster: manifest + analysis) -----------------------------------
+
+prometheus_install(
+    name = "configured_install",
+    config = ":test_config",
+    tags = ["manual"],
+)
+
+sh_test(
+    name = "install_config_test",
+    srcs = ["install_config_test.sh"],
+    args = [
+        "$(rootpath //private/manifests:prometheus.yaml)",
+        "$(rootpath :configured_install_manifest)",
+    ],
+    data = [
+        ":configured_install_manifest",
+        "//private/manifests:prometheus.yaml",
+    ],
+    size = "small",
+)
+
+analysis_test_suite(name = "analysis_tests")
+
+# ---- pins ------------------------------------------------------------------------
+
+sh_test(
+    name = "checksums_test",
+    srcs = ["checksums_test.sh"],
+    data = ["//private:versions.bzl"],
+    size = "small",
+)

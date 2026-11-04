@@ -1,0 +1,46 @@
+"""Maintainer-only render flow.
+
+Pipeline:
+  @prometheus_chart_<ver>//:files
+                       │
+                       ▼  helm_template (rules_helm)
+                       ▼
+       bazel-bin/tools/render_prometheus_<ver>.yaml
+                       │
+                       ▼  bazel run //tools:render_writeback_<ver>
+                       ▼
+   private/manifests/prometheus.yaml (committed; what consumers apply)
+
+No host helm needed at any point.
+"""
+
+load("@rules_helm//:defs.bzl", "helm_template")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+exports_files([
+    "render_prometheus.sh",
+    "update_checksums.sh",
+    "versions.bzl",
+])
+
+# ---- 29.40.3 ------------------------------------------------------------------
+
+helm_template(
+    name = "render_prometheus_29_40_3",
+    chart = ["@prometheus_chart_29_40_3//:files"],
+    values = ["//config:prometheus-values.yaml"],
+    namespace = "prometheus",
+    release_name = "prometheus",
+    include_crds = True,
+)
+
+sh_binary(
+    name = "render_writeback_29_40_3",
+    srcs = ["writeback.sh"],
+    data = [":render_prometheus_29_40_3"],
+    args = [
+        "$(rootpath :render_prometheus_29_40_3)",
+        "private/manifests/prometheus.yaml",
+    ],
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,5 @@
+groups:
+  - name: smoke
+    rules:
+      - record: smoke:up:sum
+        expr: sum(up{job="smoke-self"})

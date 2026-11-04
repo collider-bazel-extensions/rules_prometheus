@@ -1,0 +1,25 @@
+# Values overlaid at maintainer-render time over the chart's defaults.
+
+# Only the Prometheus server. The bundled sub-charts each have their own
+# rule set in this organization (rules_alertmanager) or are out of scope.
+alertmanager:
+  enabled: false
+kube-state-metrics:
+  enabled: false
+prometheus-node-exporter:
+  enabled: false
+prometheus-pushgateway:
+  enabled: false
+
+server:
+  # Fix the object names: the Deployment, Service and ConfigMap are all
+  # `prometheus` whatever the release name, which prometheus_install's
+  # rollout wait (deploy/prometheus) and config overlay (ConfigMap
+  # prometheus) rely on.
+  fullnameOverride: prometheus
+  persistentVolume:
+    # Smoke-fixture sizing; kind's local-path provisioner serves it.
+    size: 1Gi
+  extraFlags:
+    - web.enable-lifecycle
+    - web.enable-remote-write-receiver

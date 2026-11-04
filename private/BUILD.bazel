@@ -1,0 +1,62 @@
+"""Private build files for rules_prometheus. Public surface lives in
+//:defs.bzl, which re-exports from here."""
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load(":config.bzl", "prometheus_config")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "check.sh",
+    "default_config.yml",
+    "health_check.sh.tmpl",
+    "install_config.awk",
+    "launcher.py",
+    "prometheus_test_trampoline.sh",
+    "rules_test.sh.tmpl",
+    "server.sh.tmpl",
+    "testlib.py",
+    "testlib.sh",
+    "versions.bzl",
+])
+
+sh_binary(
+    name = "check",
+    srcs = ["check.sh"],
+)
+
+# prometheus_server's default (and prometheus_test's without rules).
+prometheus_config(
+    name = "default_config",
+    src = "default_config.yml",
+)
+
+bzl_library(
+    name = "providers",
+    srcs = ["providers.bzl"],
+)
+
+bzl_library(
+    name = "config",
+    srcs = ["config.bzl"],
+    deps = [":providers"],
+)
+
+bzl_library(
+    name = "server",
+    srcs = ["server.bzl"],
+    deps = [":providers"],
+)
+
+bzl_library(
+    name = "test",
+    srcs = ["test.bzl"],
+    deps = [":config", ":providers", ":server"],
+)
+
+bzl_library(
+    name = "install",
+    srcs = ["install.bzl"],
+    deps = [":providers"],
+)

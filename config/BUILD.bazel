@@ -1,0 +1,6 @@
+"""Maintainer-render values for the Prometheus chart. Consumed only by
+//tools:render_prometheus_<ver> at maintainer time."""
+
+package(default_visibility = ["//tools:__pkg__"])
+
+exports_files(["prometheus-values.yaml"])

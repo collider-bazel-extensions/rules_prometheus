@@ -1,0 +1,7 @@
+# Invalid: scrape_interval is not a duration.
+global:
+  scrape_interval: often
+scrape_configs:
+  - job_name: x
+    static_configs:
+      - targets: ["127.0.0.1:9"]

@@ -1,0 +1,3 @@
+# HELP rules_prometheus_test_value A value api_test scrapes from a file_sd target.
+# TYPE rules_prometheus_test_value gauge
+rules_prometheus_test_value{source="file_sd"} 7

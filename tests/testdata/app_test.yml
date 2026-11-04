@@ -1,0 +1,29 @@
+# promtool unit tests for app.rules.yml.
+rule_files:
+  - app.rules.yml
+evaluation_interval: 1s
+tests:
+  - name: instance down fires after 2s
+    interval: 1s
+    input_series:
+      - series: 'up{job="app", instance="a:80"}'
+        values: '0x10'
+      - series: 'up{job="api", instance="b:80"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 1s
+        alertname: InstanceDown
+        exp_alerts: []
+      - eval_time: 5s
+        alertname: InstanceDown
+        exp_alerts:
+          - exp_labels: {severity: page, job: app, instance: "a:80"}
+            exp_annotations: {summary: "a:80 of app is down"}
+    promql_expr_test:
+      - expr: job:up:sum
+        eval_time: 5s
+        exp_samples:
+          - labels: 'job:up:sum{job="app"}'
+            value: 0
+          - labels: 'job:up:sum{job="api"}'
+            value: 1

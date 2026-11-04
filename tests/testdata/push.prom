@@ -1,0 +1,2 @@
+# TYPE rules_prometheus_pushed gauge
+rules_prometheus_pushed{source="remote_write"} 42
