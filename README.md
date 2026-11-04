@@ -22,11 +22,11 @@ No host `prometheus`, `promtool`, `helm` or Go needed: binaries come from the pi
 ## Install (Bzlmod)
 
 ```python
-bazel_dep(name = "rules_prometheus", version = "0.1.0")
+bazel_dep(name = "rules_prometheus", version = "0.1.1")
 git_override(
     module_name = "rules_prometheus",
     remote = "https://github.com/collider-bazel-extensions/rules_prometheus",
-    commit = "dd758b3c965ab2e3c2b8673b485c53ecb36bdaea",  # v0.1.0
+    commit = "e589ff5fad0ae5e81f70822f3130b13029b7c509",  # v0.1.1
 )
 
 prometheus = use_extension("@rules_prometheus//:extensions.bzl", "prometheus")
@@ -46,9 +46,9 @@ To pin by archive and integrity instead of a git commit, replace the `git_overri
 ```python
 archive_override(
     module_name = "rules_prometheus",
-    urls = ["https://github.com/collider-bazel-extensions/rules_prometheus/archive/refs/tags/v0.1.0.tar.gz"],
-    strip_prefix = "rules_prometheus-0.1.0",
-    integrity = "sha256-gf62Zn9vkv98s/QElYb7jPtO0Grc4RS89/MGDzV+36E=",
+    urls = ["https://github.com/collider-bazel-extensions/rules_prometheus/archive/refs/tags/v0.1.1.tar.gz"],
+    strip_prefix = "rules_prometheus-0.1.1",
+    integrity = "sha256-KIi2GiRpxnYY7nqIPKHpodKJt2tO7HKG7lC3+sVH4kM=",
 )
 ```
 
