@@ -29,7 +29,7 @@ rules_prometheus/
 │   ├── check.sh              # `check.sh rules|config` — lint flags, placeholders, promtool check
 │   ├── rules_test.sh.tmpl    # `promtool test rules --junit=$XML_OUTPUT_FILE` in the staged dir
 │   ├── server.bzl            # prometheus_server, prometheus_health_check, PrometheusServerInfo
-│   ├── server.sh.tmpl        # runfiles resolution → launcher.py
+│   ├── server.sh.tmpl        # runfiles resolution (into variables) → launcher.py
 │   ├── launcher.py           # port → stage + expand config → start → /-/ready → env file → SIGTERM
 │   ├── test.bzl              # prometheus_test macro (+ default config with rules generator)
 │   ├── prometheus_test_trampoline.sh  # server → env → test
@@ -53,6 +53,7 @@ rules_prometheus/
     ├── invalid_config_test.sh  # bad PromQL, duplicate rules (lint_fatal on/off), bad config, placeholder
     ├── install_config_test.sh  # configured manifest: only the ConfigMap changes
     ├── checksums_test.sh
+    ├── wrapper_resolve_test.sh  # a missing runfile stops the server wrapper
     └── install_smoke/        # kind + prometheus_install(config) + promtool in the pod
 ```
 
@@ -109,7 +110,7 @@ tools/render_prometheus.sh 29.40.3    # re-render the chart manifest
 
 ### Test results (last full run: 2026-11-03)
 
-All 14 test targets pass on Linux x86_64 (Prometheus 3.15.1): 13 in
+All 15 test targets pass on Linux x86_64 (Prometheus 3.15.1): 14 in
 `//tests/...` and the kind smoke. Six runs of each server test in parallel
 are clean. Invalid PromQL and duplicate rules in a `prometheus_rules` fail
 `bazel build`; this was checked by hand.
@@ -123,6 +124,7 @@ are clean. Invalid PromQL and duplicate rules in a `prometheus_rules` fail
 | `//tests:default_config_test` | default config loads the test's rules; args forwarded | PASSED |
 | `//tests:server_test` | env file keys, self-scrape, extra_args, SIGTERM exit 0 + env removed, unset placeholder named | PASSED |
 | `//tests:health_check_test` | exits non-zero without env file, 0 with | PASSED |
+| `//tests:wrapper_resolve_test` | a missing prometheus / promtool stops the server wrapper, naming it, before the launcher runs | PASSED |
 | `//tests:install_config_test` | configured manifest: config + rule file in the ConfigMap, rest unchanged | PASSED |
 | `//tests:analysis_tests` (4) | install (with/without config), health check executables; server provider | PASSED |
 | `//tests:checksums_test` | every pinned URL has a 64-hex SHA-256 | PASSED |

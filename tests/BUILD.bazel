@@ -170,3 +170,20 @@ sh_test(
     data = ["//private:versions.bzl"],
     size = "small",
 )
+
+# The wrapper stops on a missing runfile (the prometheus binaries) instead of
+# passing an empty path to the launcher.
+sh_test(
+    name = "wrapper_resolve_test",
+    srcs = ["wrapper_resolve_test.sh"],
+    args = [
+        "$(rootpath :test_server)",
+        "$(rootpath //private:launcher.py)",
+        "$(rootpaths //toolchain:current)",
+    ],
+    data = [
+        ":test_server",
+        "//private:launcher.py",
+        "//toolchain:current",
+    ],
+)
