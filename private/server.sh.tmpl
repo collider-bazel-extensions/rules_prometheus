@@ -22,11 +22,16 @@ resolve() {
 
 name='__NAME__'
 tmp="${TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+# Resolve into variables first: a failing $(resolve) inside an argument
+# list would not stop the script under `set -e`.
 config="$(resolve '__CONFIG__')"
+launcher="$(resolve '__LAUNCHER__')"
+prometheus="$(resolve '__PROMETHEUS__')"
+promtool="$(resolve '__PROMTOOL__')"
 
-exec python3 "$(resolve '__LAUNCHER__')" \
-  --prometheus "$(resolve '__PROMETHEUS__')" \
-  --promtool "$(resolve '__PROMTOOL__')" \
+exec python3 "$launcher" \
+  --prometheus "$prometheus" \
+  --promtool "$promtool" \
   --config-dir "$(dirname "$config")" \
   --env-file "$tmp/$name.env" \
   --state-dir "$tmp/prometheus-$name" \
