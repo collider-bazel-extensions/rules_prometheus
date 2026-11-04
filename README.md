@@ -26,7 +26,7 @@ bazel_dep(name = "rules_prometheus", version = "0.1.0")
 git_override(
     module_name = "rules_prometheus",
     remote = "https://github.com/collider-bazel-extensions/rules_prometheus",
-    commit = "<v0.1.0 commit>",
+    commit = "dd758b3c965ab2e3c2b8673b485c53ecb36bdaea",  # v0.1.0
 )
 
 prometheus = use_extension("@rules_prometheus//:extensions.bzl", "prometheus")
