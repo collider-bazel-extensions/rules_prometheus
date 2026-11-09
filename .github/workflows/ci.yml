@@ -57,6 +57,23 @@ jobs:
           path: bazel-testlogs/
           if-no-files-found: ignore
 
+  consumer:
+    # rules_prometheus as a dependency, from the commit's release archive: a
+    # root without prometheus.version() resolves, repeated / unsupported
+    # versions, and @rules_prometheus//... loads (tests/ and tools/ are
+    # export-ignore'd).
+    name: consumer (ubuntu-latest, git archive)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.15.0
+        with:
+          bazelisk-cache: true
+          repository-cache: true
+
+      - name: Consumer checks
+        run: .github/consumer/check.sh "$RUNNER_TEMP/consumer"
+
   install_smoke:
     # kind + the pinned chart (server only) with a custom config; promtool
     # in the pod checks the config, the mounted rules and remote write.
