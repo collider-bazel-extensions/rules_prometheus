@@ -22,23 +22,12 @@ No host `prometheus`, `promtool`, `helm` or Go needed: binaries come from the pi
 ## Install (Bzlmod)
 
 ```python
-bazel_dep(name = "rules_prometheus", version = "0.1.1")
+bazel_dep(name = "rules_prometheus", version = "0.1.2")
 git_override(
     module_name = "rules_prometheus",
     remote = "https://github.com/collider-bazel-extensions/rules_prometheus",
     commit = "e589ff5fad0ae5e81f70822f3130b13029b7c509",  # v0.1.1
 )
-
-prometheus = use_extension("@rules_prometheus//:extensions.bzl", "prometheus")
-prometheus.version(version = "3.15.1")
-use_repo(
-    prometheus,
-    "prometheus_3_15_1_darwin_amd64",
-    "prometheus_3_15_1_darwin_arm64",
-    "prometheus_3_15_1_linux_amd64",
-    "prometheus_3_15_1_linux_arm64",
-)
-register_toolchains("@rules_prometheus//toolchain:all")
 ```
 
 To pin by archive and integrity instead of a git commit, replace the `git_override` with:
@@ -63,7 +52,17 @@ git_override(
 )
 ```
 
-The `prometheus` extension only honours the root module's `version` tags (the `mod.is_root` guard used across this organization), so declare it in your own `MODULE.bazel`. The install primitives pull in [rules_kubectl](https://github.com/collider-bazel-extensions/rules_kubectl). The server and test rules need `python3` on the host.
+That's all the wiring: rules_prometheus's own `MODULE.bazel` fetches Prometheus 3.15.1 and registers the toolchain. To fetch another pinned version as well (`private/versions.bzl`), add it in your root module:
+
+```python
+prometheus = use_extension("@rules_prometheus//:extensions.bzl", "prometheus")
+prometheus.version(version = "3.15.1")
+use_repo(prometheus, "prometheus_3_15_1_linux_amd64")  # etc., per version and platform
+```
+
+The extension creates `prometheus_<ver>_<plat>` repos for the root module's versions and rules_prometheus's own, each once; other modules' tags are ignored, and an unsupported version fails with a message naming `prometheus.version`. Through v0.1.1 the root had to declare `prometheus.version()`, or resolution failed with `does not generate repository "prometheus_3_15_1_linux_amd64"`; the `use_repo` / `register_toolchains` lines earlier READMEs asked for are harmless.
+
+The release archive (tag tarball) leaves out `tests/` and `tools/`, whose packages load dev-only modules, so `bazel query @rules_prometheus//...` works for consumers. A `git_override` clone still contains them; name packages instead (for example `@rules_prometheus//:all`). The install primitives pull in [rules_kubectl](https://github.com/collider-bazel-extensions/rules_kubectl). The server and test rules need `python3` on the host.
 
 ## Rules, config and rule unit tests
 

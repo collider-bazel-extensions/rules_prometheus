@@ -39,6 +39,16 @@ The config check copies the staged directory to a scratch dir, resolves placehol
 - **Chart and render:** the prometheus-community `prometheus` chart is rendered server-only, since its sub-charts (Alertmanager, kube-state-metrics, node-exporter, pushgateway) are separate concerns. `server.fullnameOverride: prometheus` names the Deployment, Service and ConfigMap `prometheus`. The rollout wait is `deploy/prometheus`, a Deployment (the chart's default for a single server), not a StatefulSet.
 - **Custom config:** `prometheus_install(config = ...)` swaps the data of that ConfigMap with the same awk overlay as rules_alertmanager (parameterized by ConfigMap name and first key). That drops the chart's Kubernetes service-discovery jobs and empty rule keys in favour of your config and rule files.
 
+## Extension: root's versions plus rules_prometheus's own (v0.1.2)
+
+The `prometheus` extension runs once for the whole build and sees every module's tags. Repos are named per version (`prometheus_<ver>_<plat>`), so it creates them for the root module's versions and for rules_prometheus's own, whose `MODULE.bazel` imports them and whose toolchains use them for every consumer; each once, so a repeated tag is harmless. Other modules' tags are ignored. Through v0.1.1 only the root's tags counted (`if not mod.is_root: continue`, against a collision that per-version names can't produce), so a root without `prometheus.version()` failed to resolve. An unsupported version now fails in the extension, naming `prometheus.version`.
+
+CI's `consumer` job (`.github/consumer/check.sh`) runs rules_prometheus as a dependency from the commit's `git archive`: an untagged root resolves and runs a `prometheus_rules_test` (promtool 3.15.1), a repeated tag resolves, an unsupported version fails clearly, and `@rules_prometheus//...` loads.
+
+## Release archive contents (v0.1.2)
+
+`tests/` and `tools/` are `export-ignore` (`.gitattributes`): they load dev-only `rules_itest` / `rules_kind` / `rules_helm`, which made `@rules_prometheus//...` unloadable for consumers. `REPO.bazel` `ignore_directories` would also hide them from this repo's own `bazel test`. The dev-only `use_extension("//tools:extensions.bzl", ...)` is skipped for a non-root module. A `git_override` clone still contains both.
+
 ## What this repo does not (yet) do
 
 - **Agent mode, Thanos and Mimir.** Remote write to a long-term store is a client config concern. rules_mimir installs Mimir.

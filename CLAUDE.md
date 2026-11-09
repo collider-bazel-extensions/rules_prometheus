@@ -20,7 +20,7 @@ chart. It mirrors rules_alertmanager's structure; see DESIGN.md.
 rules_prometheus/
 ├── MODULE.bazel              # module; toolchain registration; dev deps (helm, itest, kind)
 ├── defs.bzl                  # public API re-exports
-├── extensions.bzl            # `prometheus.version()` → prometheus_<ver>_<plat> repos (is_root-guarded)
+├── extensions.bzl            # `prometheus.version()` → prometheus_<ver>_<plat> repos (root's + own tags)
 ├── private/
 │   ├── versions.bzl          # PROMETHEUS_VERSIONS: url / sha256 / strip_prefix per platform
 │   ├── repositories.bzl      # per-platform repo: release tarball → prometheus + promtool
@@ -108,11 +108,13 @@ tools/update_checksums.sh 3.15.1      # re-pin binaries; --check to verify
 tools/render_prometheus.sh 29.40.3    # re-render the chart manifest
 ```
 
-### Test results (last full run: 2026-11-03)
+### Test results (last full run: 2026-11-08)
 
 All 15 test targets pass on Linux x86_64 (Prometheus 3.15.1): 14 in
 `//tests/...` and the kind smoke. Six runs of each server test in parallel
-are clean. Invalid PromQL and duplicate rules in a `prometheus_rules` fail
+are clean. CI's `consumer` job (`.github/consumer/check.sh`) checks rules_prometheus as a
+dependency from the commit's `git archive` (untagged root, repeated and unsupported
+`prometheus.version`, `//...` loads). Invalid PromQL and duplicate rules in a `prometheus_rules` fail
 `bazel build`; this was checked by hand.
 
 | Test target | What it verifies | Result |
