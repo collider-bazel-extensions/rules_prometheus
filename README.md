@@ -26,7 +26,7 @@ bazel_dep(name = "rules_prometheus", version = "0.1.2")
 git_override(
     module_name = "rules_prometheus",
     remote = "https://github.com/collider-bazel-extensions/rules_prometheus",
-    commit = "e589ff5fad0ae5e81f70822f3130b13029b7c509",  # v0.1.1
+    commit = "80cd5375b60cb1df0c07cc875eeaab59db79d5d3",  # v0.1.2
 )
 ```
 
@@ -35,9 +35,9 @@ To pin by archive and integrity instead of a git commit, replace the `git_overri
 ```python
 archive_override(
     module_name = "rules_prometheus",
-    urls = ["https://github.com/collider-bazel-extensions/rules_prometheus/archive/refs/tags/v0.1.1.tar.gz"],
-    strip_prefix = "rules_prometheus-0.1.1",
-    integrity = "sha256-KIi2GiRpxnYY7nqIPKHpodKJt2tO7HKG7lC3+sVH4kM=",
+    urls = ["https://github.com/collider-bazel-extensions/rules_prometheus/archive/refs/tags/v0.1.2.tar.gz"],
+    strip_prefix = "rules_prometheus-0.1.2",
+    integrity = "sha256-aMmk5IWB/n8OG1WK4UamToeB2zhsrhz0PdX5s2kaiho=",
 )
 ```
 
