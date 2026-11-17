@@ -26,7 +26,7 @@ bazel_dep(name = "rules_prometheus", version = "0.1.3")
 git_override(
     module_name = "rules_prometheus",
     remote = "https://github.com/collider-bazel-extensions/rules_prometheus",
-    commit = "80cd5375b60cb1df0c07cc875eeaab59db79d5d3",  # v0.1.2
+    commit = "8431f2ab5cdcc146a3e05e6c3edba8f0efbc19f7",  # v0.1.3
 )
 ```
 
@@ -37,7 +37,7 @@ archive_override(
     module_name = "rules_prometheus",
     urls = ["https://github.com/collider-bazel-extensions/rules_prometheus/archive/refs/tags/v0.1.3.tar.gz"],
     strip_prefix = "rules_prometheus-0.1.3",
-    integrity = "sha256-aMmk5IWB/n8OG1WK4UamToeB2zhsrhz0PdX5s2kaiho=",
+    integrity = "sha256-cboweDRgxzl2JsZ/GJWctomOMpo6quHx70KK9OpVfJA=",
 )
 ```
 
