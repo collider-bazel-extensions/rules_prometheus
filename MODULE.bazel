@@ -28,7 +28,7 @@ prometheus-community prometheus Helm chart 29.40.3.
 
 module(
     name = "rules_prometheus",
-    version = "0.1.2",
+    version = "0.1.3",
 )
 
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
